@@ -1,0 +1,6 @@
+*.avi
+*.mp3
+*.mp4
+*.wav
+node_modules
+package-lock.json

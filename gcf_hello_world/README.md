@@ -1,5 +1,5 @@
-Account list: `gcloud auth list`
-List current project: `gcloud config list project`
+Account list: `gcloud auth list`\
+List current project: `gcloud config list project`\
 Project list: `gcloud projects list`
 
 Create a cloud storage bucket
