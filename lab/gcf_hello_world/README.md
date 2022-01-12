@@ -15,7 +15,7 @@ When deploying a new function, you must specify `--trigger-topic`, `--trigger-bu
 Function `helloWorld` must match with function in *index.js*\
 Deploy the function to a pub/sub topic named *hello_world*:
 ```
-gcloud functions deploy helloWorld --stage-bucket [BUCKET_NAME] --trigger-topic hello_world  --runtime nodejs12
+gcloud functions deploy helloWorld --stage-bucket [BUCKET_NAME] --trigger-topic hello_world  --runtime nodejs16
 ```
 
 Test the function
@@ -25,7 +25,7 @@ Test the function
 gcloud functions call helloWorld --data "{\"data\":\"dGVzdGluZyDwn5Kj8J+Sow==\"}"
 ```
 
-Delete function
-```sh
+Delete the function
+```
 gcloud functions delete helloWorld
 ```
