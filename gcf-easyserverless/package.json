@@ -1,0 +1,7 @@
+{
+  "author": "lanly-dev",
+  "dependencies": {
+    "ffmpeg-static": "^4.4.1",
+    "fluent-ffmpeg": "^2.1.2"
+  }
+}
