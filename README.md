@@ -15,4 +15,4 @@ gsutil mb -p [PROJECT_ID] gs://[BUCKET_NAME]-input
 gsutil mb -p [PROJECT_ID] gs://[BUCKET_NAME]-output
 
 #### Deploy Cloud Function [gcf-easyserverless](./gcf-easyserverless)
-gcloud functions deploy easyServerless --stage-bucket [BUCKET_NAME] --trigger-http --runtime nodejs16 --timeout 540 --source ./gcf-easyserverless
+gcloud functions deploy easyServerless --stage-bucket [BUCKET_NAME] --trigger-topic [TOPIC] --runtime nodejs16 --timeout 540 --source ./gcf-easyserverless
