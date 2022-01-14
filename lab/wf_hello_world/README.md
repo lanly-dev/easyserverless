@@ -2,7 +2,7 @@ https://cloud.google.com/workflows/docs/quickstart-gcloud
 
 List service accounts: `gcloud iam service-accounts list`
 
-Create SA: `service-accounts create sa-name`
+Create SA: `gcloud service-accounts create sa-name`
 
 Deploy:
 ```sh

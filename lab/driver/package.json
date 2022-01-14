@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "start": "node --loader ts-node/esm index.ts"
+  },
+  "dependencies": {
+    "@google-cloud/functions": "^1.2.0",
+    "dotenv": "^11.0.0",
+    "ts-node": "^10.4.0"
+  }
+}
