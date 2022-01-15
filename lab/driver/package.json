@@ -1,9 +1,12 @@
 {
   "scripts": {
-    "start": "node --loader ts-node/esm index.ts"
+    "start": "node --loader ts-node/esm index.ts",
+    "http": "node --loader ts-node/esm indexHttp.ts"
   },
   "dependencies": {
     "@google-cloud/functions": "^1.2.0",
+    "@google-cloud/storage": "^5.17.0",
+    "axios": "^0.24.0",
     "dotenv": "^11.0.0",
     "ts-node": "^10.4.0"
   }
