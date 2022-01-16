@@ -9,8 +9,8 @@ const bInput = `${BUCKET}-input`
 const bOutput = `${BUCKET}-output`;
 (async () => {
   const input = 'input.wav'
-  const output = 'output.mp3'
-
+  const name = input.split('.').shift()
+  const outFile = `${name}.mp3`
   const storage = new Storage()
 
   await storage.bucket(bInput).upload(input, { destination: input })
@@ -22,6 +22,6 @@ const bOutput = `${BUCKET}-output`;
   console.log(resp.data)
 
   //@ts-ignore
-  await storage.bucket(bOutput).file(output).download({ destination: output })
-  console.log(`gs://${bOutput}/${output} downloaded to ${output}`)
+  await storage.bucket(bOutput).file(resp.data).download({ destination: outFile })
+  console.log(`gs://${bOutput}/${resp.data} downloaded to ${outFile}`)
 })()
