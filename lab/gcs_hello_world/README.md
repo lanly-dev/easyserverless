@@ -19,7 +19,7 @@ Make the bucket public writable/upload
 ```sh
 # Storage Legacy Bucket Writer, can overwrite or delete
 gsutil acl ch -u allUsers:W gs://<bucket>
-# Storage Object Creator, don't have delete permission can't overwrite
+# Storage Object Creator, doesn't have delete permission can't overwrite
 gsutil iam ch allUsers:roles/storage.objectCreator gs://<bucket>
 ```
 

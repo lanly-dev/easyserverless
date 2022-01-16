@@ -1,8 +1,9 @@
 import axios from 'axios'
 import dotenv from 'dotenv'
 
-(async () => {
+;(async () => {
   dotenv.config()
+  //@ts-ignore
   const resp = await axios.get(process.env.URL)
-  console.log(resp)
+  console.log(resp.data)
 })()

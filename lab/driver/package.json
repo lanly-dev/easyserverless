@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "start": "node --loader ts-node/esm index.ts",
+    "start": "node --loader ts-node/esm main.ts",
+    "index": "node --loader ts-node/esm index.ts",
     "http": "node --loader ts-node/esm indexHttp.ts"
   },
   "dependencies": {
