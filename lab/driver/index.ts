@@ -25,7 +25,6 @@ async function callCallFunction() {
     //@ts-ignore
     console.error(JSON.stringify(error.statusDetails, null, 2))
   }
-
 }
 
 listFunctions()
