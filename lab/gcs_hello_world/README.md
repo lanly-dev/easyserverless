@@ -32,7 +32,7 @@ gsutil acl ch -u allUsers:R gs://<bucket>
 gsutil iam ch allUsers:roles/storage.objectViewer gs://<bucket>
 ```
 
-Adding permission to SA:
+Adding permission to SA
 ```
 gsutil iam ch serviceAccount:[SERVICE_ACCOUNT]:[role/some.role] gs://[BUCKET_NAME]
 ```
