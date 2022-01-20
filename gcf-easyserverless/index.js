@@ -12,6 +12,12 @@ const bOutput = `${BUCKET}-output`
 exports.easyServerless = async (req, res) => {
   console.log('Start...')
   const { fileName } = req.body
+
+  if (!fileName) {
+    res.send(BUCKET)
+    return
+  }
+
   const name = fileName.split('.').shift()
   const targetFilePath = resolve(tmpdir(), fileName)
   const outFile = `${name}.mp3`
@@ -38,7 +44,6 @@ exports.easyServerless = async (req, res) => {
   } catch (error) {
     console.error(error.message ?? error)
   }
-
   res.send(outFile)
 }
 

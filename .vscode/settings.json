@@ -1,5 +1,8 @@
 {
   "files.exclude": {
     "lab": false
-  }
+  },
+  "cSpell.words": [
+    "flac"
+  ]
 }
