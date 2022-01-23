@@ -1,18 +1,46 @@
 import { createWriteStream } from 'fs'
 import { promisify } from 'util'
+import { resolve } from 'path'
+import { Storage } from '@google-cloud/storage'
 import { Uri, window } from 'vscode'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as stream from 'stream'
 import axios from 'axios'
+import dotenv = require('dotenv')
 import ffmpeg = require('fluent-ffmpeg')
 import pathToFfmpeg = require('ffmpeg-static')
 
 ffmpeg.setFfmpegPath(pathToFfmpeg)
+dotenv.config({ path: resolve(__dirname, '.env') })
+
 const pkg = require('ffmpeg-static/package.json')
 const channel = window.createOutputChannel('Easy Media Converter')
 
 export default class Converter {
+  private static bInput: string
+  private static bOutput: string
+  private static gcfUrl: string | undefined
+
+  static async init() {
+    this.gcfUrl = process.env.URL
+    if (!this.gcfUrl) {
+      window.showErrorMessage(`gcfUrl doesn't exist`)
+      return
+    }
+    try {
+      const resp = await axios.get(this.gcfUrl)
+      const b = resp.data
+      this.bInput = `${b}-input`
+      this.bOutput = `${b}-output`
+    } catch (error) {
+      //@ts-ignore
+      window.showErrorMessage(error.message ?? error)
+      return
+    }
+    this.printToChannel('Easy Media Converter activate successfully!')
+  }
+
   static async download() {
     if (!pathToFfmpeg) {
       window.showErrorMessage('No binary found for the current architecture')
@@ -20,7 +48,7 @@ export default class Converter {
     }
 
     if (fs.existsSync(pathToFfmpeg)) {
-      window.showErrorMessage('ffmpeg downloaded already')
+      window.showInformationMessage('ffmpeg downloaded already')
       return
     }
 
@@ -39,8 +67,19 @@ export default class Converter {
   static async convert({ fsPath, path }: Uri, type: 'mp3' | 'mp4') {
     channel.show()
     try {
-      this.printToChannel(path)
-      const name = path.split('/').pop()
+      const { bInput, bOutput, gcfUrl, printToChannel } = this
+
+      printToChannel(path)
+      const fileName = path.split('/').pop()
+      const storage = new Storage()
+      await storage.bucket(bInput).upload(fsPath, { destination: fileName })
+      printToChannel(`${fileName} uploaded to cloud`)
+
+      const { data: outFileName } = await axios.post(gcfUrl!, { fileName })
+      const outFsPath = fsPath.replace(fileName!, outFileName)
+      await storage.bucket(bOutput).file(outFileName).download({ destination: outFsPath })
+      console.log(`${outFileName} downloaded to ${outFsPath}`)
+
     } catch (error) {
       //@ts-ignore
       window.showErrorMessage(error.message ?? error)
@@ -50,7 +89,7 @@ export default class Converter {
   static async convertLocal({ fsPath, path }: Uri, type: 'mp3' | 'mp4') {
     channel.show()
     try {
-      this.printToChannel(path)
+      this.printToChannel(fsPath)
       const fileName = path.split('/').pop()
       const ext = fileName?.split('.')[1]
       const oPath = fsPath.replace(ext ?? '', type)

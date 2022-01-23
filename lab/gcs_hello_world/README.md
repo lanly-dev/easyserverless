@@ -9,6 +9,9 @@ https://cloud.google.com/storage/docs/access-control/using-iam-permissions \
 https://cloud.google.com/storage/docs/access-control/iam-roles \
 https://cloud.google.com/storage/docs/gsutil/commands/iam
 
+> Every bucket name must be globally unique.
+> https://cloud.google.com/storage/docs/naming-buckets
+
 List permissions
 ```
 gsutil acl get gs://<bucket>
