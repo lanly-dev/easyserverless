@@ -1,30 +1,43 @@
-import { resolve } from 'path'
+import { createWriteStream } from 'fs'
+import { promisify } from 'util'
 import { Uri, window } from 'vscode'
+import * as fs from 'fs'
 import * as os from 'os'
+import * as stream from 'stream'
 import axios from 'axios'
 import ffmpeg = require('fluent-ffmpeg')
 import pathToFfmpeg = require('ffmpeg-static')
-import { createWriteStream } from 'fs'
+
 ffmpeg.setFfmpegPath(pathToFfmpeg)
 const pkg = require('ffmpeg-static/package.json')
-import * as stream from 'stream'
-import { promisify } from 'util'
+const channel = window.createOutputChannel('Easy Media Converter')
 
 export default class Converter {
   static async download() {
-    console.log('hello')
+    if (!pathToFfmpeg) {
+      window.showErrorMessage('No binary found for the current architecture')
+      return
+    }
+
+    if (fs.existsSync(pathToFfmpeg)) {
+      window.showErrorMessage('ffmpeg downloaded already')
+      return
+    }
+
     const {
       'ffmpeg-static': { 'binary-release-tag': rTag, 'binary-release-name': rName }
     } = pkg
     const arch = os.arch()
     const platform = os.platform()
-    const baseUrl = `https://github.com/eugeneware/ffmpeg-static/releases/download/${rTag ?? rName}`
+    const release = rTag ?? rName
+    const baseUrl = `https://github.com/eugeneware/ffmpeg-static/releases/download/${release}`
     const url = `${baseUrl}/${platform}-${arch}`
     await this.downloadStream(url)
-    console.log('Hello')
+    this.printToChannel('ffmpeg downloaded successfully 🚀')
   }
 
   static async convert({ fsPath, path }: Uri, type: 'mp3' | 'mp4') {
+    channel.show()
     try {
       this.printToChannel(path)
       const name = path.split('/').pop()
@@ -35,15 +48,12 @@ export default class Converter {
   }
 
   static async convertLocal({ fsPath, path }: Uri, type: 'mp3' | 'mp4') {
+    channel.show()
     try {
       this.printToChannel(path)
       const fileName = path.split('/').pop()
-      //@ts-ignore
-      const [name, ext] = fileName?.split('.')
-      const oFileName = `${name}.${type}`
-      const oPath = fsPath.replace(ext, type)
-      console.log(fsPath, path)
-      console.log(oPath)
+      const ext = fileName?.split('.')[1]
+      const oPath = fsPath.replace(ext ?? '', type)
       await this.ffmpegConvert(type, fsPath, oPath)
     } catch (error) {
       //@ts-ignore
@@ -53,7 +63,7 @@ export default class Converter {
 
   private static ffmpegConvert(type: string, input: string, output: string) {
     return new Promise<void>((resolve, reject) => {
-      ffmpeg(input)
+      ffmpeg(input).format(type).save(output)
         .on('progress', (progress) => {
           this.printToChannel(`[ffmpeg] ${JSON.stringify(progress)}`)
         })
@@ -65,29 +75,18 @@ export default class Converter {
           this.printToChannel('[ffmpeg] finished')
           resolve()
         })
-        .format(type)
-        .save(output)
     })
   }
 
   private static downloadStream(url: string) {
-    const { onDownloadProgress } = this
-    console.log(__dirname)
-    const writer = createWriteStream(resolve(__dirname, 'ffmpeg'))
-    axios.get(url, { responseType: 'stream', onDownloadProgress }).then((response) => {
-      console.log(response)
+    const writer = createWriteStream(pathToFfmpeg)
+    axios.get(url, { responseType: 'stream' }).then((response) => {
       response.data.pipe(writer)
       return promisify(stream.finished)(writer)
     })
   }
 
-  private static onDownloadProgress(event: any) {
-    console.log(event)
-  }
-
-  private static printToChannel(output: string) {
-    const channel = window.createOutputChannel('Easy Media Converter')
-    channel.append(output)
-    channel.show()
+  private static printToChannel(text: string) {
+    channel.append(`${text}\n`)
   }
 }

@@ -16,6 +16,10 @@
   "contributes": {
     "commands": [
       {
+        "command": "emc.download",
+        "title": "EMC: Download ffmpeg"
+      },
+      {
         "command": "emc.convertMp3",
         "title": "EMC: Convert to mp3 (Cloud Function)"
       },
