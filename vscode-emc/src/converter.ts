@@ -14,8 +14,9 @@ import pathToFfmpeg = require('ffmpeg-static')
 ffmpeg.setFfmpegPath(pathToFfmpeg)
 dotenv.config({ path: resolve(__dirname, '.env') })
 
+const { createOutputChannel, showErrorMessage, showInformationMessage } = window
 const pkg = require('ffmpeg-static/package.json')
-const channel = window.createOutputChannel('Easy Media Converter')
+const channel = createOutputChannel('Easy Media Converter')
 
 export default class Converter {
   private static bInput: string
@@ -25,7 +26,7 @@ export default class Converter {
   static async init() {
     this.gcfUrl = process.env.URL
     if (!this.gcfUrl) {
-      window.showErrorMessage(`gcfUrl doesn't exist`)
+      showErrorMessage(`gcfUrl doesn't exist`)
       return
     }
     try {
@@ -35,7 +36,7 @@ export default class Converter {
       this.bOutput = `${b}-output`
     } catch (error) {
       //@ts-ignore
-      window.showErrorMessage(error.message ?? error)
+      showErrorMessage(error.message ?? error)
       return
     }
     this.printToChannel('Easy Media Converter activate successfully!')
@@ -43,12 +44,12 @@ export default class Converter {
 
   static async download() {
     if (!pathToFfmpeg) {
-      window.showErrorMessage('No binary found for the current architecture')
+      showErrorMessage('No binary found for the current architecture')
       return
     }
 
     if (fs.existsSync(pathToFfmpeg)) {
-      window.showInformationMessage('ffmpeg downloaded already')
+      showInformationMessage('ffmpeg downloaded already')
       return
     }
 
@@ -75,14 +76,16 @@ export default class Converter {
       await storage.bucket(bInput).upload(fsPath, { destination: fileName })
       printToChannel(`${fileName} uploaded to cloud`)
 
-      const { data: outFileName } = await axios.post(gcfUrl!, { fileName })
+      const { data: outFileName } = await axios.post(gcfUrl!, { fileName, type })
+      printToChannel('Converting finished')
+
       const outFsPath = fsPath.replace(fileName!, outFileName)
       await storage.bucket(bOutput).file(outFileName).download({ destination: outFsPath })
-      console.log(`${outFileName} downloaded to ${outFsPath}`)
+      printToChannel(`${outFileName} downloaded`)
 
     } catch (error) {
       //@ts-ignore
-      window.showErrorMessage(error.message ?? error)
+      showErrorMessage(error.message ?? error)
     }
   }
 
@@ -96,7 +99,7 @@ export default class Converter {
       await this.ffmpegConvert(type, fsPath, oPath)
     } catch (error) {
       //@ts-ignore
-      window.showErrorMessage(error.message ?? error)
+      showErrorMessage(error.message ?? error)
     }
   }
 

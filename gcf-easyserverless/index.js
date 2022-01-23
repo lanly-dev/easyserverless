@@ -11,7 +11,7 @@ const bOutput = `${BUCKET}-output`
 
 exports.easyServerless = async (req, res) => {
   console.log('Start...')
-  const { fileName } = req.body
+  const { fileName, type } = req.body
 
   if (!fileName) {
     res.send(BUCKET)
@@ -20,24 +20,21 @@ exports.easyServerless = async (req, res) => {
 
   const name = fileName.split('.').shift()
   const targetFilePath = resolve(tmpdir(), fileName)
-  const outFile = `${name}.mp3`
+  const outFile = `${name}.${type}`
   const outFilePath = resolve(tmpdir(), outFile)
+  const storage = new Storage()
 
-  console.log(targetFilePath)
   console.log(pathToFfmpeg)
+  console.log(targetFilePath)
+  console.log(outFilePath)
 
   try {
-    const storage = new Storage()
 
     await storage.bucket(bInput).file(fileName).download({ destination: targetFilePath })
     console.log(`gs://${bInput}/${fileName} downloaded to ${targetFilePath}`)
 
     ffmpeg.setFfmpegPath(pathToFfmpeg)
-    const format = 'mp3'
-    await convert(format, targetFilePath, outFilePath)
-
-    // const command = ffmpeg('input.avi').format('mp4')
-    // command.save('output.mp4')
+    await convert(type, targetFilePath, outFilePath)
 
     await storage.bucket(bOutput).upload(outFilePath, { destination: outFile })
     console.log(`${outFilePath} uploaded to gs://${bOutput}/${outFile}`)
@@ -49,7 +46,7 @@ exports.easyServerless = async (req, res) => {
 
 function convert(format, input, output) {
   return new Promise((resolve, reject) => {
-    ffmpeg(input)
+    ffmpeg(input).format(format).save(output)
       .on('progress', (progress) => {
         console.log(`[ffmpeg] ${JSON.stringify(progress)}`)
       })
@@ -61,7 +58,5 @@ function convert(format, input, output) {
         console.log('[ffmpeg] finished')
         resolve()
       })
-      .format(format)
-      .save(output)
   })
 }
