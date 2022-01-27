@@ -10,6 +10,7 @@ import axios from 'axios'
 import dotenv = require('dotenv')
 import ffmpeg = require('fluent-ffmpeg')
 import pathToFfmpeg = require('ffmpeg-static')
+import pb = require('pretty-bytes')
 
 ffmpeg.setFfmpegPath(pathToFfmpeg)
 dotenv.config({ path: resolve(__dirname, '.env') })
@@ -43,6 +44,7 @@ export default class Converter {
   }
 
   static async download() {
+    channel.show()
     if (!pathToFfmpeg) {
       showErrorMessage('No binary found for the current architecture')
       return
@@ -62,7 +64,10 @@ export default class Converter {
     const baseUrl = `https://github.com/eugeneware/ffmpeg-static/releases/download/${release}`
     const url = `${baseUrl}/${platform}-${arch}`
     await this.downloadStream(url)
-    this.printToChannel('ffmpeg downloaded successfully 🚀')
+    const fileSize = pb(fs.statSync(pathToFfmpeg).size)
+    const msg = `ffmpeg|${fileSize} downloaded successfully 🚀`
+    this.printToChannel(msg)
+    showInformationMessage(msg)
   }
 
   static async convert({ fsPath, path }: Uri, type: 'mp3' | 'mp4') {
@@ -122,8 +127,19 @@ export default class Converter {
 
   private static downloadStream(url: string) {
     const writer = createWriteStream(pathToFfmpeg)
-    axios.get(url, { responseType: 'stream' }).then((response) => {
-      response.data.pipe(writer)
+    return axios.get(url, { responseType: 'stream' }).then((response) => {
+      const { data: steam } = response
+      const total = response.headers['content-length']
+      const totalMb = pb(parseInt(total))
+      let dlTotal = 0
+      steam.on('data', (chunk: Buffer) => {
+        const tmp = pb(dlTotal)
+        dlTotal += chunk.length
+        const dlTotalMb = pb(dlTotal)
+        if (tmp === dlTotalMb) return
+        this.printToChannel(`${dlTotalMb}/${totalMb}`)
+      })
+      steam.pipe(writer)
       return promisify(stream.finished)(writer)
     })
   }

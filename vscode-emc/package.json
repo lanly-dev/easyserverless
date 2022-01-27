@@ -121,6 +121,7 @@
     "axios": "^0.25.0",
     "dotenv": "^14.2.0",
     "ffmpeg-static": "^4.4.1",
-    "fluent-ffmpeg": "^2.1.2"
+    "fluent-ffmpeg": "^2.1.2",
+    "pretty-bytes": "^5.6.0"
   }
 }
