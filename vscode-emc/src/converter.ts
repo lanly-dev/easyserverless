@@ -1,8 +1,9 @@
 import { createWriteStream } from 'fs'
+import { performance as perf } from 'perf_hooks'
+import { ProgressLocation, Uri, window } from 'vscode'
 import { promisify } from 'util'
 import { resolve } from 'path'
 import { Storage } from '@google-cloud/storage'
-import { Uri, window } from 'vscode'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as stream from 'stream'
@@ -63,9 +64,12 @@ export default class Converter {
     const release = rTag ?? rName
     const baseUrl = `https://github.com/eugeneware/ffmpeg-static/releases/download/${release}`
     const url = `${baseUrl}/${platform}-${arch}`
+    const t0 = perf.now()
     await this.downloadStream(url)
+    const t1 = perf.now()
     const fileSize = pb(fs.statSync(pathToFfmpeg).size)
-    const msg = `ffmpeg|${fileSize} downloaded successfully 🚀`
+    const ms = Math.round(t1 - t0)
+    const msg = `ffmpeg - ${fileSize} - ${ms} ms downloaded successfully! 🚀🚀`
     this.printToChannel(msg)
     showInformationMessage(msg)
   }
@@ -127,24 +131,29 @@ export default class Converter {
 
   private static downloadStream(url: string) {
     const writer = createWriteStream(pathToFfmpeg)
-    return axios.get(url, { responseType: 'stream' }).then((response) => {
-      const { data: steam } = response
-      const total = response.headers['content-length']
-      const totalMb = pb(parseInt(total))
-      let dlTotal = 0
-      steam.on('data', (chunk: Buffer) => {
-        const tmp = pb(dlTotal)
-        dlTotal += chunk.length
-        const dlTotalMb = pb(dlTotal)
-        if (tmp === dlTotalMb) return
-        this.printToChannel(`${dlTotalMb}/${totalMb}`)
+    return window.withProgress({
+      location: ProgressLocation.Window,
+      title: 'Downloading ffmpeg'
+    }, (progress) => {
+      return axios.get(url, { responseType: 'stream' }).then((response) => {
+        const { data: steam } = response
+        const total = response.headers['content-length']
+        const totalMb = pb(parseInt(total))
+        let dlTotal = 0
+        steam.on('data', (chunk: Buffer) => {
+          const tmp = pb(dlTotal)
+          dlTotal += chunk.length
+          const dlTotalMb = pb(dlTotal)
+          if (tmp === dlTotalMb) return
+          progress.report({ message: `${dlTotalMb}/${totalMb}`})
+        })
+        steam.pipe(writer)
+        return promisify(stream.finished)(writer)
       })
-      steam.pipe(writer)
-      return promisify(stream.finished)(writer)
     })
   }
 
   private static printToChannel(text: string) {
-    channel.append(`${text}\n`)
-  }
+      channel.append(`${text}\n`)
+    }
 }
