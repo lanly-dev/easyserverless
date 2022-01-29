@@ -101,12 +101,18 @@ export default class Converter {
   static async convertLocal({ fsPath, path }: Uri, type: 'mp3' | 'mp4') {
     channel.show()
     try {
-      this.printToChannel(fsPath)
+      this.printToChannel(`File input: ${fsPath}`)
       const fileName = path.split('/').pop()
       const [name, ext] = <string[]>fileName?.split('.')
       const oPath = fsPath.replace(ext ?? '', type)
+      const t0 = perf.now()
       await this.ffmpegConvert(type, fsPath, oPath)
-      showInformationMessage(`Converted ${fileName} => ${name}.${type} completed`)
+      const t1 = perf.now()
+      const ms = Math.round(t1 - t0)
+      const msg = `${fileName} => ${name}.${type} completed!`
+      this.printToChannel(`${msg}\nTotal time: ${this.fmtMSS(ms)}`)
+      showInformationMessage(msg)
+      this.printToChannel(`File output: ${oPath}`)
     } catch (error) {
       //@ts-ignore
       showErrorMessage(error.message ?? error)
@@ -116,15 +122,36 @@ export default class Converter {
   private static ffmpegConvert(type: string, input: string, output: string) {
     return window.withProgress({
       location: ProgressLocation.Window,
-      title: 'Converting...'
+      title: 'Converting'
     }, (progress) => {
       return new Promise<void>((resolve, reject) => {
+        let avgFps = 0
+        let avgKbps = 0
+        let totalFps = 0
+        let totalKbps = 0
+        let count1 = 0
+        let count2 = 0
+
         ffmpeg(input).format(type).save(output)
           .on('progress', (prog) => {
             const { frames, currentFps: fps, currentKbps: kbps, targetSize: s, timemark } = prog
-            const msg = `${frames}frame|${fps}fps|${kbps}kbps|${s}size|${timemark}timemark`
+            if (!isNaN(fps) && fps > 0) {
+              totalFps += fps
+              avgFps = avgFps === 0 ? avgFps + fps : (avgFps + fps) / 2
+              count1++
+            }
+
+            if (!isNaN(kbps) && kbps > 0) {
+              avgKbps = avgKbps === 0 ? avgKbps + kbps : (avgKbps + kbps) / 2
+              totalKbps += isNaN(kbps) ? 0 : kbps
+              count2++
+            }
+            if (!totalFps) totalFps = -1
+            if (!totalKbps) totalKbps = -1
+
+            // const msg = `${frames}frame|${fps}fps|${kbps}kbps|${s}size|${timemark}timemark`
             // const message = `${frames}|${fps}|${kbps}|${s}|${timemark}`
-            this.printToChannel(`[ffmpeg] ${msg}`)
+            // this.printToChannel(`[ffmpeg] ${msg}`)
             progress.report({ message: timemark })
           })
           .on('error', (err) => {
@@ -132,7 +159,10 @@ export default class Converter {
             reject(err)
           })
           .on('end', () => {
+            avgFps = this.round((avgFps + totalFps / count1) / 2)
+            avgKbps = this.round((avgKbps + totalKbps / count2) / 2)
             this.printToChannel('[ffmpeg] finished')
+            this.printToChannel(`Average fps: ${avgFps}, average kbps: ${avgKbps}`)
             resolve()
           })
       })
@@ -165,5 +195,16 @@ export default class Converter {
 
   private static printToChannel(text: string) {
     channel.append(`${text}\n`)
+  }
+
+  private static round(num: number) {
+    return Math.round((num + Number.EPSILON) * 100) / 100
+  }
+
+  // M:SS
+  private static fmtMSS(ms: number) {
+   let s = Math.round(ms / 1000)
+   if (s < 60 ) return `${s} sec`
+   return (s - (s %= 60)) / 60 + (9 < s ? ':' : ':0') + s
   }
 }
