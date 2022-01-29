@@ -103,9 +103,10 @@ export default class Converter {
     try {
       this.printToChannel(fsPath)
       const fileName = path.split('/').pop()
-      const ext = fileName?.split('.')[1]
+      const [name, ext] = <string[]>fileName?.split('.')
       const oPath = fsPath.replace(ext ?? '', type)
       await this.ffmpegConvert(type, fsPath, oPath)
+      showInformationMessage(`Converted ${fileName} => ${name}.${type} completed`)
     } catch (error) {
       //@ts-ignore
       showErrorMessage(error.message ?? error)
@@ -113,19 +114,28 @@ export default class Converter {
   }
 
   private static ffmpegConvert(type: string, input: string, output: string) {
-    return new Promise<void>((resolve, reject) => {
-      ffmpeg(input).format(type).save(output)
-        .on('progress', (progress) => {
-          this.printToChannel(`[ffmpeg] ${JSON.stringify(progress)}`)
-        })
-        .on('error', (err) => {
-          this.printToChannel(`[ffmpeg] error: ${err.message}`)
-          reject(err)
-        })
-        .on('end', () => {
-          this.printToChannel('[ffmpeg] finished')
-          resolve()
-        })
+    return window.withProgress({
+      location: ProgressLocation.Window,
+      title: 'Converting...'
+    }, (progress) => {
+      return new Promise<void>((resolve, reject) => {
+        ffmpeg(input).format(type).save(output)
+          .on('progress', (prog) => {
+            const { frames, currentFps: fps, currentKbps: kbps, targetSize: s, timemark } = prog
+            const msg = `${frames}frame|${fps}fps|${kbps}kbps|${s}size|${timemark}timemark`
+            // const message = `${frames}|${fps}|${kbps}|${s}|${timemark}`
+            this.printToChannel(`[ffmpeg] ${msg}`)
+            progress.report({ message: timemark })
+          })
+          .on('error', (err) => {
+            this.printToChannel(`[ffmpeg] error: ${err.message}`)
+            reject(err)
+          })
+          .on('end', () => {
+            this.printToChannel('[ffmpeg] finished')
+            resolve()
+          })
+      })
     })
   }
 
@@ -145,7 +155,7 @@ export default class Converter {
           dlTotal += chunk.length
           const dlTotalMb = pb(dlTotal)
           if (tmp === dlTotalMb) return
-          progress.report({ message: `${dlTotalMb}/${totalMb}`})
+          progress.report({ message: `${dlTotalMb}/${totalMb}` })
         })
         steam.pipe(writer)
         return promisify(stream.finished)(writer)
@@ -154,6 +164,6 @@ export default class Converter {
   }
 
   private static printToChannel(text: string) {
-      channel.append(`${text}\n`)
-    }
+    channel.append(`${text}\n`)
+  }
 }
