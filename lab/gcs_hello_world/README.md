@@ -1,5 +1,6 @@
 https://www.npmjs.com/package/@google-cloud/storage \
-https://github.com/googleapis/nodejs-storage/tree/main/samples
+https://github.com/googleapis/nodejs-storage/tree/main/samples \
+https://cloud.google.com/storage/docs/reference/libraries
 
 ACL - Access Control List\
 https://cloud.google.com/storage/docs/gsutil/commands/acl

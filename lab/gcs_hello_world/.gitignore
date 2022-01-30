@@ -1,4 +1,6 @@
+*.avi
 *.wav
 .env
+key*.json
 node_modules
 package-lock.json
