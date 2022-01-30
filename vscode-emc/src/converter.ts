@@ -64,38 +64,54 @@ export default class Converter {
     const release = rTag ?? rName
     const baseUrl = `https://github.com/eugeneware/ffmpeg-static/releases/download/${release}`
     const url = `${baseUrl}/${platform}-${arch}`
+
     const t0 = perf.now()
     await this.downloadStream(url)
     const t1 = perf.now()
-    const fileSize = pb(fs.statSync(pathToFfmpeg).size)
     const ms = Math.round(t1 - t0)
+
+    const fileSize = pb(fs.statSync(pathToFfmpeg).size)
     const msg = `ffmpeg - ${fileSize} - ${ms} ms downloaded successfully! 🚀🚀`
     this.printToChannel(msg)
     showInformationMessage(msg)
   }
 
-  static async convert({ fsPath, path }: Uri, type: 'mp3' | 'mp4') {
+  static convert({ fsPath, path }: Uri, type: 'mp3' | 'mp4') {
     channel.show()
-    try {
+    const p = window.withProgress({
+      location: ProgressLocation.Window,
+      title: 'Converting'
+    }, async (progress) => {
       const { bInput, bOutput, gcfUrl, printToChannel } = this
-
       printToChannel(path)
       const fileName = path.split('/').pop()
       const storage = new Storage()
+
+      printToChannel(`Uploading $(cloud-upload)`)
+      progress.report({ message: `Uploading $(cloud-upload)` })
       await storage.bucket(bInput).upload(fsPath, { destination: fileName })
       printToChannel(`${fileName} uploaded to cloud`)
 
+      progress.report({ message: `Processing ⚙` })
+      printToChannel('Converting...')
       const { data: outFileName } = await axios.post(gcfUrl!, { fileName, type })
       printToChannel('Converting finished')
 
-      const outFsPath = fsPath.replace(fileName!, outFileName)
-      await storage.bucket(bOutput).file(outFileName).download({ destination: outFsPath })
-      printToChannel(`${outFileName} downloaded`)
+      printToChannel(`Downloading $(cloud-download)`)
+      progress.report({ message: `Downloading $(cloud-download)` })
+      const outFsPath = fsPath.replace(fileName!, '')
+      const { outFile: oPath, fileName: oFName } = this.getOutFile(outFsPath, fileName!, type)
+      await storage.bucket(bOutput).file(outFileName).download({ destination: oPath })
+      printToChannel(`File downloaded as ${oFName}`)
 
-    } catch (error) {
-      //@ts-ignore
-      showErrorMessage(error.message ?? error)
-    }
+      return { iFName: fileName, oFName }
+    })
+    p.then(
+      ({ iFName, oFName }) => {
+        this.printToChannel('\n')
+        showInformationMessage(`${iFName} => ${oFName} completed!`)
+      },
+      (error) => showErrorMessage(error.message ?? error))
   }
 
   static async convertLocal({ fsPath, path }: Uri, type: 'mp3' | 'mp4') {
@@ -104,12 +120,15 @@ export default class Converter {
       this.printToChannel(`File input: ${fsPath}`)
       const fileName = path.split('/').pop()
       const [name, ext] = <string[]>fileName?.split('.')
-      const oPath = fsPath.replace(ext ?? '', type)
+      const dir = fsPath.replace(fileName!, '')
+      const { outFile: oPath, fileName: oFName } = this.getOutFile(dir, name, type)
+
       const t0 = perf.now()
       await this.ffmpegConvert(type, fsPath, oPath)
       const t1 = perf.now()
       const ms = Math.round(t1 - t0)
-      const msg = `${fileName} => ${name}.${type} completed!`
+
+      const msg = `${fileName} => ${oFName} completed!`
       this.printToChannel(`${msg}\nTotal time: ${this.fmtMSS(ms)}`)
       showInformationMessage(msg)
       this.printToChannel(`File output: ${oPath}`)
@@ -203,8 +222,16 @@ export default class Converter {
 
   // M:SS
   private static fmtMSS(ms: number) {
-   let s = Math.round(ms / 1000)
-   if (s < 60 ) return `${s} sec`
-   return (s - (s %= 60)) / 60 + (9 < s ? ':' : ':0') + s
+    let s = Math.round(ms / 1000)
+    if (s < 60) return `${s} sec`
+    return (s - (s %= 60)) / 60 + (9 < s ? ':' : ':0') + s
+  }
+
+  //@ts-ignore
+  private static getOutFile(dir: string, name: string, type: 'mp3' | 'mp4', num?: number) {
+    const fileName = `${name}${!num ? '' : `-${num}`}.${type}`
+    const outFile = resolve(dir, fileName)
+    if (fs.existsSync(outFile)) return this.getOutFile(dir, name, type, !num ? 1 : ++num)
+    return { outFile, fileName }
   }
 }
