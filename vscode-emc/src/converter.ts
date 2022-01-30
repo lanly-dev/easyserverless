@@ -82,33 +82,47 @@ export default class Converter {
       location: ProgressLocation.Window,
       title: 'Converting'
     }, async (progress) => {
-      const { bInput, bOutput, gcfUrl, printToChannel } = this
-      printToChannel(path)
+      const { bInput, bOutput, fmtMSS, gcfUrl, printToChannel } = this
+      printToChannel(`File input: ${fsPath}`)
       const fileName = path.split('/').pop()
+      const name = fileName?.split('.')[0]
       const storage = new Storage()
 
-      printToChannel(`Uploading $(cloud-upload)`)
-      progress.report({ message: `Uploading $(cloud-upload)` })
+      printToChannel(`Uploading to the cloud...`)
+      progress.report({ message: `uploading $(cloud-upload)` })
+      const t0 = perf.now()
       await storage.bucket(bInput).upload(fsPath, { destination: fileName })
+      const t1 = perf.now()
+      printToChannel(`Time: ${fmtMSS(Math.round(t1 - t0))}`)
       printToChannel(`${fileName} uploaded to cloud`)
 
-      progress.report({ message: `Processing ⚙` })
       printToChannel('Converting...')
+      progress.report({ message: `processing ⚙` })
+      const t2 = perf.now()
       const { data: outFileName } = await axios.post(gcfUrl!, { fileName, type })
+      const t3 = perf.now()
+      printToChannel(`Time: ${fmtMSS(Math.round(t3 - t2))}`)
       printToChannel('Converting finished')
 
-      printToChannel(`Downloading $(cloud-download)`)
-      progress.report({ message: `Downloading $(cloud-download)` })
+      printToChannel(`Downloading...`)
+      progress.report({ message: `downloading $(cloud-download)` })
       const outFsPath = fsPath.replace(fileName!, '')
-      const { outFile: oPath, fileName: oFName } = this.getOutFile(outFsPath, fileName!, type)
+      // destructure method can't do recursion => this == undefined
+      const { outFile: oPath, fileName: oFName } = this.getOutFile(outFsPath, name!, type)
+      const t4 = perf.now()
       await storage.bucket(bOutput).file(outFileName).download({ destination: oPath })
+      const t5 = perf.now()
+      printToChannel(`Time: ${fmtMSS(Math.round(t5 - t4))}`)
+      const totalTime = fmtMSS(Math.round(t5 - t0))
       printToChannel(`File downloaded as ${oFName}`)
 
-      return { iFName: fileName, oFName }
+      return { iFName: fileName, oFName, oPath, totalTime: totalTime }
     })
     p.then(
-      ({ iFName, oFName }) => {
-        this.printToChannel('\n')
+      ({ iFName, oFName, oPath, totalTime }) => {
+        const msg = `${iFName} => ${oFName} completed!`
+        this.printToChannel(`${msg}\nTotal time: ${totalTime}`)
+        this.printToChannel(`File output: ${oPath}\n`)
         showInformationMessage(`${iFName} => ${oFName} completed!`)
       },
       (error) => showErrorMessage(error.message ?? error))
@@ -119,9 +133,9 @@ export default class Converter {
     try {
       this.printToChannel(`File input: ${fsPath}`)
       const fileName = path.split('/').pop()
-      const [name, ext] = <string[]>fileName?.split('.')
+      const name = fileName?.split('.')[0]
       const dir = fsPath.replace(fileName!, '')
-      const { outFile: oPath, fileName: oFName } = this.getOutFile(dir, name, type)
+      const { outFile: oPath, fileName: oFName } = this.getOutFile(dir, name!, type)
 
       const t0 = perf.now()
       await this.ffmpegConvert(type, fsPath, oPath)
@@ -131,7 +145,7 @@ export default class Converter {
       const msg = `${fileName} => ${oFName} completed!`
       this.printToChannel(`${msg}\nTotal time: ${this.fmtMSS(ms)}`)
       showInformationMessage(msg)
-      this.printToChannel(`File output: ${oPath}`)
+      this.printToChannel(`File output: ${oPath}\n`)
     } catch (error) {
       //@ts-ignore
       showErrorMessage(error.message ?? error)
