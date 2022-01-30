@@ -20,6 +20,7 @@ gsutil iam get gs://<bucket>
 ```
 
 Make the bucket public writable/upload
+>-> limited size: 3mb?, it needs credentials to upload larger file
 ```sh
 # Storage Legacy Bucket Writer, can overwrite or delete
 gsutil acl ch -u allUsers:W gs://<bucket>
