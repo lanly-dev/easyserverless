@@ -9,10 +9,6 @@
     "axios": "^0.25.0",
     "dotenv": "^14.3.2",
     "form-data": "^4.0.0",
-    "node-fetch": "^2.6.7",
     "ts-node": "^10.4.0"
-  },
-  "devDependencies": {
-    "@types/node-fetch": "^3.0.3"
   }
 }

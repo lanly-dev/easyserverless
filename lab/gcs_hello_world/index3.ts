@@ -24,13 +24,9 @@ async function main() {
     const [location] = await storage.bucket(bNameInput).file(input).createResumableUpload()
     // console.log(location)
 
-    // Using formData doesn't work
     const formData = new FormData()
     formData.append('file', fs.createReadStream(input), input)
     const resp = await axios.post(location, formData, {
-      headers: {
-        'content-type': 'video/x-msvideo'
-      },
       'maxBodyLength': Infinity
     })
     console.log(`${input} uploaded to ${bNameInput}`)
