@@ -1,3 +1,6 @@
+// https://cloud.google.com/storage/docs/samples/storage-upload-without-authentication-create-resumable
+// https://cloud.google.com/storage/docs/samples/storage-upload-without-authentication-signed-url
+
 import { Storage } from '@google-cloud/storage'
 import dotenv from 'dotenv'
 dotenv.config()

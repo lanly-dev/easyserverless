@@ -1,7 +1,7 @@
 {
   "author": "lanly-dev",
   "scripts": {
-    "deploy": "gcloud functions deploy easyServerless"
+    "update": "gcloud functions deploy easyServerless"
   },
   "dependencies": {
     "@google-cloud/storage": "^5.17.0",

@@ -87,8 +87,8 @@ function convert(format, input, output) {
         reject(err)
       })
       .on('end', () => {
-        avgFps = this.round((avgFps + totalFps / count1) / 2)
-        avgKbps = this.round((avgKbps + totalKbps / count2) / 2)
+        avgFps = round((avgFps + totalFps / count1) / 2)
+        avgKbps = round((avgKbps + totalKbps / count2) / 2)
         console.log(`[ffmpeg] finished - ${avgFps}fpg | ${avgKbps} kbps`)
         resolve({ avgFps, avgKbps })
       })
@@ -105,4 +105,8 @@ async function getLocation(bInput, input) {
   } catch (error) {
     console.log(error)
   }
+}
+
+function round(num) {
+  return Math.round((num + Number.EPSILON) * 100) / 100
 }

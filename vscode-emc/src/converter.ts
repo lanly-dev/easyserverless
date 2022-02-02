@@ -78,12 +78,12 @@ export default class Converter {
 
   static convert({ fsPath, path }: Uri, type: 'mp3' | 'mp4') {
     channel.show()
+    const { bOutput, fmtMSS, gcfUrl, printToChannel } = this
+
     const p = window.withProgress({
       location: ProgressLocation.Window,
       title: 'Converting'
     }, async (progress) => {
-      const { bOutput, fmtMSS, gcfUrl, printToChannel } = this
-
       if (!this.gcfUrl) {
         const msg = `Error: gcfUrl doesn't exist`
         printToChannel(msg)
@@ -96,7 +96,7 @@ export default class Converter {
         return
       }
 
-      printToChannel(`File input: ${fsPath} - ${pb(inputSize)}`)
+      printToChannel(`File input: ${fsPath} - size: ${pb(inputSize)}`)
 
       const fileName = path.split('/').pop()
       const name = fileName?.split('.')[0]
@@ -125,8 +125,12 @@ export default class Converter {
       printToChannel('Converting...')
       progress.report({ message: `processing ⚙` })
       const t2 = perf.now()
-      const { data: outFileName } = await axios.post(gcfUrl!, { fileName, type })
+      const { data } = await axios.post(gcfUrl!, { fileName, type })
       const t3 = perf.now()
+
+      const { outFile, stats, totalTime: cloudTime } = data
+      const { avgFps, avgKbps } = stats
+      printToChannel(`Cloud stats: ${avgFps} fps | ${avgKbps} Kbps | ${fmtMSS(cloudTime)} ms`)
       printToChannel(`Time: ${fmtMSS(Math.round(t3 - t2))}`)
       printToChannel('Converting finished')
 
@@ -136,7 +140,7 @@ export default class Converter {
       // destructure method can't do recursion => this == undefined
       const { outFile: oPath, fileName: oFName } = this.getOutFile(outFsPath, name!, type)
       const t4 = perf.now()
-      await storage.bucket(bOutput).file(outFileName).download({ destination: oPath })
+      await storage.bucket(bOutput).file(outFile).download({ destination: oPath })
       const t5 = perf.now()
       printToChannel(`Time: ${fmtMSS(Math.round(t5 - t4))}`)
       const totalTime = fmtMSS(Math.round(t5 - t0))
@@ -144,28 +148,25 @@ export default class Converter {
 
       return { iFName: fileName, oFName, oPath, totalTime: totalTime }
     })
-    p.then(
-      (data) => {
-        if (!data) return
-        const { iFName, oFName, oPath, totalTime } = data
-        const msg = `${iFName} => ${oFName} completed!`
-        const size = fs.statSync(oPath).size
-        this.printToChannel(`${msg}\nTotal time: ${totalTime}`)
-        this.printToChannel(`File output: ${oPath} - ${pb(size)}\n`)
-        showInformationMessage(`${iFName} => ${oFName} completed!`)
-      },
-      (error) => {
-        this.printToChannel(error.message ?? error)
-        this.printToChannel('\n')
-        showErrorMessage(error.message ?? error)
-      }
+
+    p.then((data) => {
+      if (!data) return
+      const { iFName, oFName, oPath, totalTime } = data
+      const msg = `${iFName} => ${oFName} completed!`
+      const size = fs.statSync(oPath).size
+      printToChannel(`${msg}\nTotal time: ${totalTime}`)
+      printToChannel(`File output: ${oPath} - size: ${pb(size)}\n`)
+      showInformationMessage(`${iFName} => ${oFName} completed!`)
+    },
+      (error) => this.showErrorMsg(error)
     )
   }
 
   static async convertLocal({ fsPath, path }: Uri, type: 'mp3' | 'mp4') {
     channel.show()
     try {
-      this.printToChannel(`File input: ${fsPath}`)
+      const inputSize = fs.statSync(fsPath).size
+      this.printToChannel(`File input: ${fsPath} - size: ${pb(inputSize)}`)
       const fileName = path.split('/').pop()
       const name = fileName?.split('.')[0]
       const dir = fsPath.replace(fileName!, '')
@@ -179,14 +180,10 @@ export default class Converter {
       const msg = `${fileName} => ${oFName} completed!`
       this.printToChannel(`${msg}\nTotal time: ${this.fmtMSS(ms)}`)
       const size = fs.statSync(oPath).size
-      this.printToChannel(`File output: ${oPath} - ${pb(size)}\n`)
+      this.printToChannel(`File output: ${oPath} - size: ${pb(size)}\n`)
       showInformationMessage(msg)
     } catch (error) {
-      //@ts-ignore
-      this.printToChannel(error.message ?? error)
-      this.printToChannel('\n')
-      //@ts-ignore
-      showErrorMessage(error.message ?? error)
+      this.showErrorMsg(error)
     }
   }
 
@@ -285,5 +282,12 @@ export default class Converter {
     const outFile = resolve(dir, fileName)
     if (fs.existsSync(outFile)) return this.getOutFile(dir, name, type, !num ? 1 : ++num)
     return { outFile, fileName }
+  }
+
+  //@ts-ignore
+  private static showErrorMsg(error) {
+    const msg = 'Error: conversion failed!'
+    this.printToChannel(`${msg} - ${error.message ?? JSON.stringify(error, null, 2)}\n`)
+    showErrorMessage(msg)
   }
 }
