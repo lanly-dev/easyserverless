@@ -12,5 +12,5 @@ gcloud functions deploy easyServerless --trigger-http --allow-unauthenticated --
 ```
 
 ## Refs:
-https://cloud.google.com/sdk/gcloud/reference/topic/gcloudignore
+https://cloud.google.com/sdk/gcloud/reference/topic/gcloudignore \
 https://cloud.google.com/sdk/gcloud/reference/functions/deploy

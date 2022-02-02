@@ -99,7 +99,6 @@ async function getLocation(bInput, input) {
   const storage = new Storage()
 
   try {
-    //@ts-ignore
     const [location] = await storage.bucket(bInput).file(input).createResumableUpload()
     return location
   } catch (error) {
