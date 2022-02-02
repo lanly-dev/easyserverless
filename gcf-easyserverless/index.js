@@ -1,4 +1,5 @@
 require('dotenv').config()
+const { performance: perf } = require('perf_hooks')
 const { resolve } = require('path')
 const { Storage } = require('@google-cloud/storage')
 const { tmpdir } = require('os')
@@ -42,29 +43,54 @@ exports.easyServerless = async (req, res) => {
     console.log(`gs://${bInput}/${fileName} downloaded to ${targetFilePath}`)
 
     ffmpeg.setFfmpegPath(pathToFfmpeg)
-    await convert(type, targetFilePath, outFilePath)
+    const t0 = perf.now()
+    const stats = await convert(type, targetFilePath, outFilePath)
+    const t1 = perf.now()
 
     await storage.bucket(bOutput).upload(outFilePath, { destination: outFile })
     console.log(`${outFilePath} uploaded to gs://${bOutput}/${outFile}`)
+    res.send({ outFile, stats, totalTime: Math.round(t1 - t0) })
+
   } catch (error) {
     console.error(error.message ?? error)
+    res.status(500).send(error.message ?? error)
   }
-  res.send(outFile)
 }
 
 function convert(format, input, output) {
   return new Promise((resolve, reject) => {
+    let avgFps = 0
+    let avgKbps = 0
+    let totalFps = 0
+    let totalKbps = 0
+    let count1 = 0
+    let count2 = 0
     ffmpeg(input).format(format).save(output)
-      .on('progress', (progress) => {
-        console.log(`[ffmpeg] ${JSON.stringify(progress)}`)
+      .on('progress', (prog) => {
+        const { currentFps: fps, currentKbps: kbps } = prog
+        if (!isNaN(fps) && fps > 0) {
+          totalFps += fps
+          avgFps = avgFps === 0 ? avgFps + fps : (avgFps + fps) / 2
+          count1++
+        }
+
+        if (!isNaN(kbps) && kbps > 0) {
+          avgKbps = avgKbps === 0 ? avgKbps + kbps : (avgKbps + kbps) / 2
+          totalKbps += isNaN(kbps) ? 0 : kbps
+          count2++
+        }
+        if (!totalFps) totalFps = -1
+        if (!totalKbps) totalKbps = -1
       })
       .on('error', (err) => {
         console.log(`[ffmpeg] error: ${err.message}`)
         reject(err)
       })
       .on('end', () => {
-        console.log('[ffmpeg] finished')
-        resolve()
+        avgFps = this.round((avgFps + totalFps / count1) / 2)
+        avgKbps = this.round((avgKbps + totalKbps / count2) / 2)
+        console.log(`[ffmpeg] finished - ${avgFps}fpg | ${avgKbps} kbps`)
+        resolve({ avgFps, avgKbps })
       })
   })
 }
@@ -76,7 +102,6 @@ async function getLocation(bInput, input) {
     //@ts-ignore
     const [location] = await storage.bucket(bInput).file(input).createResumableUpload()
     return location
-
   } catch (error) {
     console.log(error)
   }
