@@ -3,6 +3,7 @@ import axios from 'axios'
 import dotenv from 'dotenv'
 import FormData from 'form-data'
 import fs from 'fs'
+import mime from 'mime-types'
 dotenv.config()
 
 const { BUCKET_NAME, KEY_FILE } = process.env
@@ -15,12 +16,18 @@ async function main() {
   try {
     const storage = new Storage({ keyFilename: KEY_FILE })
     const [location] = await storage.bucket(bNameInput).file(input).createResumableUpload()
-    // console.log(location)
+    const mType = mime.lookup(input)
+
+    if (!mType) throw 'mime type error'
+    console.log(location)
+    console.log(mType)
 
     const formData = new FormData()
-    formData.append('file', fs.createReadStream(input), input)
+    formData.append('file', fs.createReadStream(input), { filename: input, contentType: mType })
+    const headers = formData.getHeaders()
     const resp = await axios.post(location, formData, {
-      'maxBodyLength': Infinity
+      'maxBodyLength': Infinity,
+      headers
     })
     console.log(`${input} uploaded to ${bNameInput}`)
     console.log(resp)
