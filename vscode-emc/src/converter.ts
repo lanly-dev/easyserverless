@@ -1,4 +1,4 @@
-import { createWriteStream } from 'fs'
+import { createReadStream, createWriteStream } from 'fs'
 import { performance as perf } from 'perf_hooks'
 import { ProgressLocation, Uri, window } from 'vscode'
 import { promisify } from 'util'
@@ -10,6 +10,8 @@ import * as stream from 'stream'
 import axios from 'axios'
 import dotenv = require('dotenv')
 import ffmpeg = require('fluent-ffmpeg')
+import FormData = require('form-data')
+import mimeTypes = require('mime-types')
 import pathToFfmpeg = require('ffmpeg-static')
 import pb = require('pretty-bytes')
 
@@ -21,7 +23,6 @@ const pkg = require('ffmpeg-static/package.json')
 const channel = createOutputChannel('Easy Media Converter')
 
 export default class Converter {
-  private static bInput: string
   private static bOutput: string
   private static gcfUrl: string | undefined
 
@@ -34,7 +35,6 @@ export default class Converter {
     try {
       const resp = await axios.get(this.gcfUrl)
       const b = resp.data
-      this.bInput = `${b}-input`
       this.bOutput = `${b}-output`
     } catch (error) {
       //@ts-ignore
@@ -82,21 +82,30 @@ export default class Converter {
       location: ProgressLocation.Window,
       title: 'Converting'
     }, async (progress) => {
-      const { bInput, bOutput, fmtMSS, gcfUrl, printToChannel } = this
-      printToChannel(`File input: ${fsPath}`)
+      if (!this.gcfUrl) throw Error(`gcfUrl doesn't exist`)
+
+      const { bOutput, fmtMSS, gcfUrl, printToChannel } = this
+      const inputSize = fs.statSync(fsPath).size
+      printToChannel(`File input: ${fsPath} - ${pb(inputSize)}`)
+
       const fileName = path.split('/').pop()
       const name = fileName?.split('.')[0]
       const storage = new Storage()
 
-      if (!this.gcfUrl)  throw Error(`gcfUrl doesn't exist`)
-      const { data: uri } = await axios.post(this.gcfUrl, { fileName, needSignedUrl: true } )
-      console.log(uri)
+      const contentType = mimeTypes.lookup(fileName!)
+      if (!contentType) throw Error('MIME type error')
+
+      const { data: loc } = await axios.post(this.gcfUrl, { fileName, needLoc: true })
+      console.log(contentType)
+      const formData = new FormData()
+      formData.append('file', createReadStream(fsPath), { filename: fileName, contentType })
 
       printToChannel(`Uploading to the cloud...`)
       progress.report({ message: `uploading $(cloud-upload)` })
       const t0 = perf.now()
-      await storage.bucket(bInput).upload(fsPath, { destination: fileName, uri, validation: false })
+      await axios.post(loc, formData, { 'maxBodyLength': Infinity })
       const t1 = perf.now()
+
       printToChannel(`Time: ${fmtMSS(Math.round(t1 - t0))}`)
       printToChannel(`${fileName} uploaded to cloud`)
 
@@ -125,12 +134,14 @@ export default class Converter {
     p.then(
       ({ iFName, oFName, oPath, totalTime }) => {
         const msg = `${iFName} => ${oFName} completed!`
+        const size = fs.statSync(oPath).size
         this.printToChannel(`${msg}\nTotal time: ${totalTime}`)
-        this.printToChannel(`File output: ${oPath}\n`)
+        this.printToChannel(`File output: ${oPath} - ${pb(size)}\n`)
         showInformationMessage(`${iFName} => ${oFName} completed!`)
       },
       (error) => {
         this.printToChannel(error.message ?? error)
+        this.printToChannel('\n')
         showErrorMessage(error.message ?? error)
       }
     )
@@ -152,11 +163,13 @@ export default class Converter {
 
       const msg = `${fileName} => ${oFName} completed!`
       this.printToChannel(`${msg}\nTotal time: ${this.fmtMSS(ms)}`)
+      const size = fs.statSync(oPath).size
+      this.printToChannel(`File output: ${oPath} - ${pb(size)}\n`)
       showInformationMessage(msg)
-      this.printToChannel(`File output: ${oPath}\n`)
     } catch (error) {
       //@ts-ignore
       this.printToChannel(error.message ?? error)
+      this.printToChannel('\n')
       //@ts-ignore
       showErrorMessage(error.message ?? error)
     }

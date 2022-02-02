@@ -11,16 +11,16 @@ const bOutput = `${BUCKET}-output`
 
 exports.easyServerless = async (req, res) => {
   console.log('Start...')
-  const { fileName, needSignedUrl, type } = req.body
+  const { fileName, needLoc, type } = req.body
 
   if (!fileName) {
     res.send(BUCKET)
     return
   }
 
-  if (needSignedUrl) {
+  if (needLoc) {
     try {
-      res.send(await generateV4WriteSignedUrl(bInput, fileName))
+      res.send(await getLocation(bInput, fileName))
     } catch (error) {
       console.log(error)
     }
@@ -69,19 +69,13 @@ function convert(format, input, output) {
   })
 }
 
-async function generateV4WriteSignedUrl(bInput, input) {
+async function getLocation(bInput, input) {
   const storage = new Storage()
-  console.log('helloworld', bInput, input)
-  const options = {
-    version: 'v4',
-    action: 'write',
-    expires: Date.now() + 15 * 60 * 1000
-  }
 
   try {
     //@ts-ignore
-    const [url] = await storage.bucket(bInput).file(input).getSignedUrl(options)
-    return url
+    const [location] = await storage.bucket(bInput).file(input).createResumableUpload()
+    return location
 
   } catch (error) {
     console.log(error)
