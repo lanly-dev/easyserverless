@@ -88,10 +88,14 @@ export default class Converter {
       const name = fileName?.split('.')[0]
       const storage = new Storage()
 
+      if (!this.gcfUrl)  throw Error(`gcfUrl doesn't exist`)
+      const { data: uri } = await axios.post(this.gcfUrl, { fileName, needSignedUrl: true } )
+      console.log(uri)
+
       printToChannel(`Uploading to the cloud...`)
       progress.report({ message: `uploading $(cloud-upload)` })
       const t0 = perf.now()
-      await storage.bucket(bInput).upload(fsPath, { destination: fileName })
+      await storage.bucket(bInput).upload(fsPath, { destination: fileName, uri, validation: false })
       const t1 = perf.now()
       printToChannel(`Time: ${fmtMSS(Math.round(t1 - t0))}`)
       printToChannel(`${fileName} uploaded to cloud`)
@@ -125,7 +129,11 @@ export default class Converter {
         this.printToChannel(`File output: ${oPath}\n`)
         showInformationMessage(`${iFName} => ${oFName} completed!`)
       },
-      (error) => showErrorMessage(error.message ?? error))
+      (error) => {
+        this.printToChannel(error.message ?? error)
+        showErrorMessage(error.message ?? error)
+      }
+    )
   }
 
   static async convertLocal({ fsPath, path }: Uri, type: 'mp3' | 'mp4') {
@@ -147,6 +155,8 @@ export default class Converter {
       showInformationMessage(msg)
       this.printToChannel(`File output: ${oPath}\n`)
     } catch (error) {
+      //@ts-ignore
+      this.printToChannel(error.message ?? error)
       //@ts-ignore
       showErrorMessage(error.message ?? error)
     }

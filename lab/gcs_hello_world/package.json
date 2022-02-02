@@ -1,11 +1,18 @@
 {
   "scripts": {
     "start": "node --loader ts-node/esm index.ts",
-    "start2": "node --loader ts-node/esm index2.ts"
+    "start2": "node --loader ts-node/esm index2.ts",
+    "start3": "node --loader ts-node/esm index3.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^5.18.1",
+    "axios": "^0.25.0",
     "dotenv": "^14.3.2",
+    "form-data": "^4.0.0",
+    "node-fetch": "^2.6.7",
     "ts-node": "^10.4.0"
+  },
+  "devDependencies": {
+    "@types/node-fetch": "^3.0.3"
   }
 }

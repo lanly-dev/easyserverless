@@ -7,7 +7,6 @@ dotenv.config()
 const { BUCKET_NAME, KEY_FILE } = process.env
 console.log(BUCKET_NAME, KEY_FILE)
 
-const storage = new Storage({ keyFilename: KEY_FILE })
 const bNameInput = `${BUCKET_NAME}-input`
 const bNameOutput = `${BUCKET_NAME}-output`
 
@@ -16,6 +15,8 @@ const output = 'input.avi'
 
 async function main() {
   try {
+    // Doesn't work without key file
+    const storage = new Storage()
     const url = await generateV4WriteSignedUrl()
     console.log(url)
     // If validated
@@ -34,6 +35,8 @@ async function main() {
 }
 
 async function generateV4WriteSignedUrl() {
+  // Doesn't work without key file
+  const storage = new Storage({ keyFilename: KEY_FILE })
   const options = {
     version: 'v4',
     action: 'write',
