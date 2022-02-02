@@ -82,10 +82,20 @@ export default class Converter {
       location: ProgressLocation.Window,
       title: 'Converting'
     }, async (progress) => {
-      if (!this.gcfUrl) throw Error(`gcfUrl doesn't exist`)
-
       const { bOutput, fmtMSS, gcfUrl, printToChannel } = this
+
+      if (!this.gcfUrl) {
+        const msg = `Error: gcfUrl doesn't exist`
+        printToChannel(msg)
+        throw Error(msg)
+      }
+
       const inputSize = fs.statSync(fsPath).size
+      if (inputSize > 50000000) {
+        showInformationMessage('Please select media file < 50MB')
+        return
+      }
+
       printToChannel(`File input: ${fsPath} - ${pb(inputSize)}`)
 
       const fileName = path.split('/').pop()
@@ -93,10 +103,13 @@ export default class Converter {
       const storage = new Storage()
 
       const contentType = mimeTypes.lookup(fileName!)
-      if (!contentType) throw Error('MIME type error')
+      if (!contentType) {
+        const msg = 'Error: MIME type error'
+        printToChannel(msg)
+        throw Error(msg)
+      }
 
       const { data: loc } = await axios.post(this.gcfUrl, { fileName, needLoc: true })
-      console.log(contentType)
       const formData = new FormData()
       formData.append('file', createReadStream(fsPath), { filename: fileName, contentType })
 
@@ -132,7 +145,9 @@ export default class Converter {
       return { iFName: fileName, oFName, oPath, totalTime: totalTime }
     })
     p.then(
-      ({ iFName, oFName, oPath, totalTime }) => {
+      (data) => {
+        if (!data) return
+        const { iFName, oFName, oPath, totalTime } = data
         const msg = `${iFName} => ${oFName} completed!`
         const size = fs.statSync(oPath).size
         this.printToChannel(`${msg}\nTotal time: ${totalTime}`)
