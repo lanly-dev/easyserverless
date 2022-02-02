@@ -1,22 +1,15 @@
-// https://github.com/googleapis/nodejs-storage/blob/main/samples/generateV4UploadSignedUrl.js
-
 import { Storage } from '@google-cloud/storage'
 import axios from 'axios'
 import dotenv from 'dotenv'
 import FormData from 'form-data'
 import fs from 'fs'
 dotenv.config()
-//@ts-ignore
-import fetch = require('node-fetch')
 
 const { BUCKET_NAME, KEY_FILE } = process.env
 console.log(BUCKET_NAME, KEY_FILE)
 
 const bNameInput = `${BUCKET_NAME}-input`
-const bNameOutput = `${BUCKET_NAME}-output`
-
 const input = 'input.avi'
-const output = 'input.avi'
 
 async function main() {
   try {
