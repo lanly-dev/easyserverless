@@ -1,12 +1,12 @@
-const axios = require('axios')
 const { Storage } = require('@google-cloud/storage')
+const axios = require('axios')
 require('dotenv').config()
 
 const { BUCKET_NAME, KEY_FILE } = process.env
 const storage = new Storage({ keyFilename: KEY_FILE })
 
 const bInput = `${BUCKET_NAME}-input`
-const input =  'input.txt'
+const input = 'input.txt'
 
 async function main() {
   const [location] = await storage.bucket(bInput).file(input).createResumableUpload()

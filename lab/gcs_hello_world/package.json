@@ -2,7 +2,7 @@
   "scripts": {
     "start": "node --loader ts-node/esm index.ts",
     "start2": "node --loader ts-node/esm index2.ts",
-    "start3": "node --loader ts-node/esm index3.ts"
+    "upload": "node --loader ts-node/esm uploadMedia.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^5.18.1",
