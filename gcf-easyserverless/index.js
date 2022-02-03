@@ -12,18 +12,24 @@ const bOutput = `${BUCKET}-output`
 
 exports.easyServerless = async (req, res) => {
   console.log('Start...')
-  const { fileName, needLoc, type } = req.body
-
-  if (!fileName) {
-    res.send(BUCKET)
-    return
-  }
+  const { fileName, needLoc, needUrl, type } = req.body
 
   if (needLoc) {
     try {
       res.send(await getLocation(bInput, fileName))
     } catch (error) {
-      console.log(error)
+      console.error(error)
+      res.status(500).send(error.message ?? error)
+    }
+    return
+  }
+
+  if (needUrl) {
+    try {
+      res.send(await getReadSignedUrl(bOutput, fileName))
+    } catch (error) {
+      console.error(error)
+      res.status(500).send(error.message ?? error)
     }
     return
   }
@@ -32,13 +38,13 @@ exports.easyServerless = async (req, res) => {
   const targetFilePath = resolve(tmpdir(), fileName)
   const outFile = `${name}.${type}`
   const outFilePath = resolve(tmpdir(), outFile)
-  const storage = new Storage()
 
   console.log(pathToFfmpeg)
   console.log(targetFilePath)
   console.log(outFilePath)
 
   try {
+    const storage = new Storage()
     await storage.bucket(bInput).file(fileName).download({ destination: targetFilePath })
     console.log(`gs://${bInput}/${fileName} downloaded to ${targetFilePath}`)
 
@@ -50,7 +56,6 @@ exports.easyServerless = async (req, res) => {
     await storage.bucket(bOutput).upload(outFilePath, { destination: outFile })
     console.log(`${outFilePath} uploaded to gs://${bOutput}/${outFile}`)
     res.send({ outFile, stats, totalTime: Math.round(t1 - t0) })
-
   } catch (error) {
     console.error(error.message ?? error)
     res.status(500).send(error.message ?? error)
@@ -97,15 +102,21 @@ function convert(format, input, output) {
 
 async function getLocation(bInput, input) {
   const storage = new Storage()
-
-  try {
-    const [location] = await storage.bucket(bInput).file(input).createResumableUpload()
-    return location
-  } catch (error) {
-    console.log(error)
-  }
+  const [location] = await storage.bucket(bInput).file(input).createResumableUpload()
+  return location
 }
 
 function round(num) {
   return Math.round((num + Number.EPSILON) * 100) / 100
+}
+
+async function getReadSignedUrl(bucketName, fileName) {
+  const options = {
+    version: 'v4',
+    action: 'read',
+    expires: Date.now() + 15 * 60 * 1000
+  }
+  const storage = new Storage()
+  const [url] = await storage.bucket(bInput).file(fileName).getSignedUrl(options)
+  return url
 }

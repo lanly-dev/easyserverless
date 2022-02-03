@@ -36,7 +36,10 @@ async function main() {
     })
     .catch((error) => {
       if (error.response) {
-        console.log(error.responderEnd)
+        console.log(error.response.status)
+        console.log(error.response.statusText)
+      } else {
+        console.log(error)
       }
     })
 }

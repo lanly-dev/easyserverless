@@ -3,11 +3,10 @@ import { performance as perf } from 'perf_hooks'
 import { ProgressLocation, Uri, window } from 'vscode'
 import { promisify } from 'util'
 import { resolve } from 'path'
-import { Storage } from '@google-cloud/storage'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as stream from 'stream'
-import axios from 'axios'
+import axios, { AxiosRequestConfig, ResponseType } from 'axios'
 import dotenv = require('dotenv')
 import ffmpeg = require('fluent-ffmpeg')
 import FormData = require('form-data')
@@ -17,7 +16,6 @@ import pb = require('pretty-bytes')
 
 ffmpeg.setFfmpegPath(pathToFfmpeg)
 dotenv.config({ path: resolve(__dirname, '.env') })
-
 const { createOutputChannel, showErrorMessage, showInformationMessage } = window
 const pkg = require('ffmpeg-static/package.json')
 const channel = createOutputChannel('Easy Media Converter')
@@ -32,15 +30,7 @@ export default class Converter {
       showErrorMessage(`gcfUrl doesn't exist`)
       return
     }
-    try {
-      const resp = await axios.get(this.gcfUrl)
-      const b = resp.data
-      this.bOutput = `${b}-output`
-    } catch (error) {
-      //@ts-ignore
-      showErrorMessage(error.message ?? error)
-      return
-    }
+
     this.printToChannel('Easy Media Converter activate successfully!')
   }
 
@@ -78,13 +68,13 @@ export default class Converter {
 
   static convert({ fsPath, path }: Uri, type: 'mp3' | 'mp4') {
     channel.show()
-    const { bOutput, fmtMSS, gcfUrl, printToChannel } = this
+    const { fmtMSS, gcfUrl, printToChannel } = this
 
     const p = window.withProgress({
       location: ProgressLocation.Window,
       title: 'Converting'
     }, async (progress) => {
-      if (!this.gcfUrl) {
+      if (!gcfUrl) {
         const msg = `Error: gcfUrl doesn't exist`
         printToChannel(msg)
         throw Error(msg)
@@ -100,7 +90,6 @@ export default class Converter {
 
       const fileName = path.split('/').pop()
       const name = fileName?.split('.')[0]
-      const storage = new Storage()
 
       const contentType = mimeTypes.lookup(fileName!)
       if (!contentType) {
@@ -109,7 +98,7 @@ export default class Converter {
         throw Error(msg)
       }
 
-      const { data: loc } = await axios.post(this.gcfUrl, { fileName, needLoc: true })
+      const { data: loc } = await axios.post(gcfUrl, { fileName, needLoc: true })
       const formData = new FormData()
       formData.append('file', createReadStream(fsPath), { filename: fileName, contentType })
 
@@ -134,13 +123,21 @@ export default class Converter {
       printToChannel(`Time: ${fmtMSS(Math.round(t3 - t2))}`)
       printToChannel('Converting finished')
 
-      printToChannel(`Downloading...`)
-      progress.report({ message: `downloading $(cloud-download)` })
-      const outFsPath = fsPath.replace(fileName!, '')
+      const outFsDir = fsPath.replace(fileName!, '')
       // destructure method can't do recursion => this == undefined
-      const { outFile: oPath, fileName: oFName } = this.getOutFile(outFsPath, name!, type)
+      const { outFile: oPath, fileName: oFName } = this.getOutFile(outFsDir, name!, type)
+
+      const { data: url } = await axios.post(gcfUrl, { fileName: outFile, needUrl: true })
+      const axiosOpts = {
+        responseType: <ResponseType>'arraybuffer',
+        headers: {
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          'Content-Type': mimeTypes.lookup(oFName)
+        }
+      }
+      printToChannel(`Downloading...`)
       const t4 = perf.now()
-      await storage.bucket(bOutput).file(outFile).download({ destination: oPath })
+      await this.downloadFile(url, oPath, axiosOpts)
       const t5 = perf.now()
       printToChannel(`Time: ${fmtMSS(Math.round(t5 - t4))}`)
       const totalTime = fmtMSS(Math.round(t5 - t0))
@@ -185,6 +182,22 @@ export default class Converter {
     } catch (error) {
       this.showErrorMsg(error)
     }
+  }
+
+  private static downloadFile(url: string, outputPath:string, axiosOpts: AxiosRequestConfig) {
+    return new Promise<void>((resolve, reject) => {
+      axios.get(url, axiosOpts).then((resp) => {
+        fs.writeFile(outputPath, resp.data, (err) => {
+          if (err) reject(err.message)
+          resolve()
+        })
+      }, (error) => {
+        if (error.response) {
+          const { status, statusText } = error.response
+          reject(`${status} ${statusText}`)
+        } else reject(error)
+      })
+    })
   }
 
   private static ffmpegConvert(type: string, input: string, output: string) {
