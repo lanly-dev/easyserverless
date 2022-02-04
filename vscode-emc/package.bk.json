@@ -16,12 +16,24 @@
   "contributes": {
     "commands": [
       {
+        "command": "emc.download",
+        "title": "EMC: Download ffmpeg"
+      },
+      {
         "command": "emc.convertMp3",
-        "title": "EMC: Convert to mp3"
+        "title": "EMC: Convert to mp3 (Cloud Function)"
       },
       {
         "command": "emc.convertMp4",
-        "title": "EMC: Convert to mp4"
+        "title": "EMC: Convert to mp4 (Cloud Function)"
+      },
+      {
+        "command": "emc.convertLocalMp3",
+        "title": "EMC: Convert to mp3 (locally)"
+      },
+      {
+        "command": "emc.convertLocalMp4",
+        "title": "EMC: Convert to mp4 (locally)"
       }
     ],
     "menus": {
@@ -32,6 +44,14 @@
         },
         {
           "command": "emc.convertMp4",
+          "when": "false"
+        },
+        {
+          "command": "emc.convertLocalMp3",
+          "when": "false"
+        },
+        {
+          "command": "emc.convertLocalMp4",
           "when": "false"
         }
       ],
@@ -45,6 +65,16 @@
         {
           "when": "resourceExtname =~ /\\.(avi|wmv|flv|mkv)$/",
           "command": "emc.convertMp4",
+          "group": "emcGroup@1"
+        },
+        {
+          "when": "resourceExtname =~ /\\.(wav|wma)$/",
+          "command": "emc.convertLocalMp3",
+          "group": "emcGroup@1"
+        },
+        {
+          "when": "resourceExtname =~ /\\.(avi|wmv|flv|mkv)$/",
+          "command": "emc.convertLocalMp4",
           "group": "emcGroup@1"
         }
       ]
