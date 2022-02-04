@@ -3,6 +3,7 @@ import { performance as perf } from 'perf_hooks'
 import { ProgressLocation, Uri, window } from 'vscode'
 import { promisify } from 'util'
 import { resolve } from 'path'
+import { Storage } from '@google-cloud/storage'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as stream from 'stream'
@@ -21,13 +22,22 @@ const pkg = require('ffmpeg-static/package.json')
 const channel = createOutputChannel('Easy Media Converter')
 
 export default class Converter {
-  private static bOutput: string
+  private static bInput: string
   private static gcfUrl: string | undefined
 
   static async init() {
     this.gcfUrl = process.env.URL
     if (!this.gcfUrl) {
       showErrorMessage(`gcfUrl doesn't exist`)
+      return
+    }
+    try {
+      const resp = await axios.get(this.gcfUrl)
+      const b = resp.data
+      this.bInput = `${b}-input`
+    } catch (error) {
+      //@ts-ignore
+      showErrorMessage(error.message ?? error)
       return
     }
 
@@ -68,7 +78,7 @@ export default class Converter {
 
   static convert({ fsPath, path }: Uri, type: 'mp3' | 'mp4') {
     channel.show()
-    const { fmtMSS, gcfUrl, printToChannel } = this
+    const { bInput, fmtMSS, gcfUrl, printToChannel } = this
 
     const p = window.withProgress({
       location: ProgressLocation.Window,
@@ -90,23 +100,34 @@ export default class Converter {
 
       const fileName = path.split('/').pop()
       const name = fileName?.split('.')[0]
+      let t0, t1
+      if (inputSize < 3000000) {
+        const storage = new Storage()
+        printToChannel(`Uploading to the cloud...`)
+        progress.report({ message: `uploading $(cloud-upload)` })
+        t0 = perf.now()
+        // Need write permission
+        await storage.bucket(bInput).upload(fsPath, { destination: fileName })
+        t1 = perf.now()
 
-      const contentType = mimeTypes.lookup(fileName!)
-      if (!contentType) {
-        const msg = 'Error: MIME type error'
-        printToChannel(msg)
-        throw Error(msg)
+      } else {
+        const contentType = mimeTypes.lookup(fileName!)
+        if (!contentType) {
+          const msg = 'Error: MIME type error'
+          printToChannel(msg)
+          throw Error(msg)
+        }
+
+        const { data: loc } = await axios.post(gcfUrl, { fileName, needLoc: true })
+        const formData = new FormData()
+        formData.append('file', createReadStream(fsPath), { filename: fileName, contentType })
+
+        printToChannel(`Uploading to the cloud...`)
+        progress.report({ message: `uploading $(cloud-upload)` })
+        t0 = perf.now()
+        await axios.post(loc, formData, { 'maxBodyLength': Infinity })
+        t1 = perf.now()
       }
-
-      const { data: loc } = await axios.post(gcfUrl, { fileName, needLoc: true })
-      const formData = new FormData()
-      formData.append('file', createReadStream(fsPath), { filename: fileName, contentType })
-
-      printToChannel(`Uploading to the cloud...`)
-      progress.report({ message: `uploading $(cloud-upload)` })
-      const t0 = perf.now()
-      await axios.post(loc, formData, { 'maxBodyLength': Infinity })
-      const t1 = perf.now()
 
       printToChannel(`Time: ${fmtMSS(Math.round(t1 - t0))}`)
       printToChannel(`${fileName} uploaded to cloud`)

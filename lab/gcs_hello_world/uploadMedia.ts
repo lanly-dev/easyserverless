@@ -22,6 +22,8 @@ async function main() {
     console.log(location)
     console.log(mType)
 
+    // Uploading using formData lost all media properties
+    // results conversion failure
     const formData = new FormData()
     formData.append('file', fs.createReadStream(input), { filename: input, contentType: mType })
     const headers = formData.getHeaders()

@@ -1,8 +1,9 @@
 {
   "author": "lanly-dev",
   "scripts": {
-    "update": "gcloud functions deploy easyServerless",
-    "list-upload": "gcloud meta list-files-for-upload"
+    "deploy": "gcloud functions deploy easyServerless --trigger-http --allow-unauthenticated --runtime nodejs16 --timeout 540 --memory 8192MB",
+    "list-upload": "gcloud meta list-files-for-upload",
+    "update": "gcloud functions deploy easyServerless"
   },
   "dependencies": {
     "@google-cloud/storage": "^5.18.1",

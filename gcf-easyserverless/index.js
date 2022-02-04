@@ -14,6 +14,11 @@ exports.easyServerless = async (req, res) => {
   console.log('Start...')
   const { fileName, needLoc, needUrl, type } = req.body
 
+  if (!fileName) {
+    res.send(BUCKET)
+    return
+  }
+
   if (needLoc) {
     try {
       res.send(await getLocation(bInput, fileName))
@@ -117,6 +122,6 @@ async function getReadSignedUrl(bucketName, fileName) {
     expires: Date.now() + 15 * 60 * 1000
   }
   const storage = new Storage()
-  const [url] = await storage.bucket(bInput).file(fileName).getSignedUrl(options)
+  const [url] = await storage.bucket(bucketName).file(fileName).getSignedUrl(options)
   return url
 }
