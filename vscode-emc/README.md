@@ -12,7 +12,7 @@ It converts supported media file to mp3/mp4 format here and there 🎉.
 - Support audio format: `wav | wma`
 - Support video format: `avi | wmv | flv | mkv`
 ## Known Issues
-- Best to keep the media file under 3MB for conversion.
+- Best to keep the media file under 3MB for converting.
 - Due to file properties lost that in transfer process method for bigger file, *ffmpeg* may not able to convert it.
 
 ## Release Notes
