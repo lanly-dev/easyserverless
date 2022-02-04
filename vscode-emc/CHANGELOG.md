@@ -6,7 +6,8 @@ Check [Keep a Changelog](http://keepachangelog.com) for recommendations on how t
 
 ## [0.0.1] - January 2022
 - Initial release
-- TODO
+- webpack 5.68.0 compiled with 3 warnings in 15580 ms
+- 11 files, 1.68MB, 1.64.0
 
 ### Note
 Using *ffmpeg* that deployed on Google Cloud Function for the hackathon requirement - Google Cloud | Easy as Pie Hackathon

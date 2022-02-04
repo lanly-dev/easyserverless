@@ -157,6 +157,7 @@ export default class Converter {
         }
       }
       printToChannel(`Downloading...`)
+      progress.report({ message: `Downloading $(cloud-download)` })
       const t4 = perf.now()
       await this.downloadFile(url, oPath, axiosOpts)
       const t5 = perf.now()

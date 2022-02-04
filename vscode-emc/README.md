@@ -1,7 +1,13 @@
-# Easy Media Converter README
-An extension that convert supported media file to mp3/mp4 format
+# Easy Media Converter
+Have you ever wondered 🤔 could VS Code become a media converter for some reason?\
+Or ever stump upon the need to convert quickly a media file for your game development?\
+The answer is **YES❗**
 
-// TODO how to instruction
+This is the extension that could help you with that job, and right inside the VS Code. How 😎🆒🧊!\
+It converts supported media file to mp3/mp4 format here and there 🎉.
+
+<img src='./media/emc.gif' width='450'/>
+
 ## Features
 - Support audio format: `wav | wma`
 - Support video format: `avi | wmv | flv | mkv`

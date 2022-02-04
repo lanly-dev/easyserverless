@@ -8,6 +8,7 @@
 **/*.map
 **/*.ts
 **/tsconfig.json
+media/emc.svg
 node_modules/**
 package.bk.json
 src/**

@@ -2,6 +2,8 @@
   "name": "easymediaconverter",
   "displayName": "Easy Media Converter",
   "description": "Convert audio and video media to mp3/mp4",
+  "homepage": "https://github.com/lanly-dev/easyserverless/tree/main/vscode-emc",
+  "publisher": "lanly-dev",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.64.0"
@@ -9,6 +11,20 @@
   "categories": [
     "Other"
   ],
+  "keywords": [
+    "Audio",
+    "Convert",
+    "Easy",
+    "Media",
+    "Video"
+  ],
+  "icon": "media/emc.png",
+  "galleryBanner": {
+    "color": "white",
+    "theme": "light"
+  },
+  "preview":true,
+  "qna": false,
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -126,5 +142,9 @@
     "form-data": "^4.0.0",
     "mime-types": "^2.1.34",
     "pretty-bytes": "^5.6.0"
-  }
+  },
+  "repository": {
+    "url": "https://github.com/lanly-dev/easyserverless/tree/main/vscode-emc"
+  },
+  "license": "MIT"
 }
