@@ -10,4 +10,4 @@ Check [Keep a Changelog](http://keepachangelog.com) for recommendations on how t
 - 11 files, 1.68MB, 1.64.0
 
 ### Note
-Using *ffmpeg* that deployed on Google Cloud Function for the hackathon requirement - Google Cloud | Easy as Pie Hackathon
+Using *ffmpeg* that deployed on Google Cloud Functions for the hackathon requirement - Google Cloud | Easy as Pie Hackathon

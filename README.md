@@ -1,3 +1,5 @@
+> The vscode project has move to https://github.com/lanly-dev/vscode-emc
+
 ## Deployment
 
 #### Create buckets to host input and output files and add public permission to upload/download input/output
